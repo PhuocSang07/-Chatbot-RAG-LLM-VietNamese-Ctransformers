@@ -1,0 +1,14 @@
+transformers
+ctransformers
+langchain
+langchain-community
+torch
+pypdf
+sentence-transformers
+gpt4all
+faiss-cpu
+openai
+bitsandbytes 
+accelerate 
+xformers 
+einops 
