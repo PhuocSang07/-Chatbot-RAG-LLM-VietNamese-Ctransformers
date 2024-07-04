@@ -29,7 +29,7 @@ def create_db_from_files():
     loader = DirectoryLoader(pdf_data_path, glob="*.pdf", loader_cls = PyPDFLoader)
     documents = loader.load()
 
-    text_splitter = AI21SemanticTextSplitter(chunk_size=2048, chunk_overlap=512)
+    text_splitter = AI21SemanticTextSplitter(chunk_size=4096, chunk_overlap=1024)
 
     chunks = text_splitter.split_documents(documents)
 

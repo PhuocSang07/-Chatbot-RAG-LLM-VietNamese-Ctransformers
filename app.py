@@ -16,8 +16,8 @@ from langchain.embeddings import CacheBackedEmbeddings
 
 import torch
 
-model_name = "vilm/vinallama-2.7b-chat-GGUF"
-model_file_path = './models/vinallama-7b-chat_q5_0.gguf'
+# model_file_path = './models/vinallama-7b-chat_q5_0.gguf'
+model_file_path = './models/ggml-vistral-7B-chat-q8.gguf'
 model_embedding_name = 'bkai-foundation-models/vietnamese-bi-encoder'
 vectorDB_path = './db'
 
