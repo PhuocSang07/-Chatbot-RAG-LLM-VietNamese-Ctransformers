@@ -5,6 +5,9 @@ __pycache__/
 
 # C extensions
 *.so
+res.txt
+res1.txt
+
 
 # Distribution / packaging
 models/

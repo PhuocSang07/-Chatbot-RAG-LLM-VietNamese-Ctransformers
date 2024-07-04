@@ -1,12 +1,19 @@
 import gradio as gr
 from huggingface_hub import InferenceClient
+import langchain
 import os
 from langchain_community.llms import CTransformers
 from langchain_community.llms import HuggingFaceHub
 from langchain.prompts import PromptTemplate
 from langchain.chains import RetrievalQA
 from langchain_community.vectorstores import FAISS
+from langchain.storage import LocalFileStore
 from langchain_huggingface import HuggingFaceEmbeddings
+from langchain.retrievers import EnsembleRetriever
+from langchain_community.retrievers import BM25Retriever
+from langchain_community.cache import InMemoryCache
+from langchain.embeddings import CacheBackedEmbeddings
+
 import torch
 
 model_name = "vilm/vinallama-2.7b-chat-GGUF"
@@ -15,6 +22,7 @@ model_embedding_name = 'bkai-foundation-models/vietnamese-bi-encoder'
 vectorDB_path = './db'
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+store = LocalFileStore("./cache/")
 
 def load_model(model_file_path, 
                model_type, 
@@ -33,7 +41,7 @@ def load_model(model_file_path,
     )
     return llm
 
-def load_db():
+def create_embedding_model():
     model_kwargs = {'device': device}
     encode_kwargs = {'normalize_embeddings': False}
     embeddings = HuggingFaceEmbeddings(
@@ -41,6 +49,15 @@ def load_db():
         model_kwargs=model_kwargs,
         encode_kwargs=encode_kwargs
     )
+    embedder = CacheBackedEmbeddings.from_bytes_store(embeddings,
+                                                      store,
+                                                      namespace=model_embedding_name)
+    return embedder
+
+embeddings = create_embedding_model()
+
+def load_db():
+    embeddings
     db = FAISS.load_local(vectorDB_path, embeddings, allow_dangerous_deserialization=True)
     return db
 
@@ -57,7 +74,7 @@ def create_chain(llm,
                 db, 
                 top_k_documents=3, 
                 return_source_documents=True):
-    
+    print(prompt)
     chain = RetrievalQA.from_chain_type(
         llm = llm,
         chain_type = 'stuff',
@@ -78,20 +95,25 @@ db = load_db()
 llm = load_model(
     model_file_path=model_file_path, 
     model_type='llama',
-    context_length=2048
+    context_length=2048,
+    max_new_tokens=2048,
     )
 
 
 template = """<|im_start|>system
-Sử dụng thông tin sau đây để trả lời câu hỏi. Nếu bạn không biết câu trả lời, hãy nói không biết, đừng cố tạo ra câu trả lời \n
+Sử dụng thông tin sau đây để trả lời câu hỏi. Nếu bạn không biết câu trả lời, hãy nói không biết, đừng cố tạo ra câu trả lời. \n
 {context}<|im_end|>\n
 <|im_start|>user\n
 {question}!<|im_end|>\n
-<|im_start|>assistant
+<|im_start|>
+Hãy đảm bảo rằng bạn cung cấp câu trả lời với các mốc thời gian chính xác nhất có thể.
+assistant
 """
 
 prompt = create_prompt(template=template)
 llm_chain = create_chain(llm, prompt, db)
+
+langchain.llm_cache = InMemoryCache()
 
 def respond(message, 
             history: list[tuple[str, str]], 
@@ -100,10 +122,25 @@ def respond(message,
             temperature, 
             top_k_documents,
             ):
-    response = llm_chain.invoke({"query": message})
-
-    history.append((message, response['result']))
     
+    messages = [{"role": "system", "content": system_message}]
+
+    for val in history:
+        if val[0]:
+            messages.append({"role": "user", "content": val[0]})
+        if val[1]:
+            messages.append({"role": "assistant", "content": val[1]})
+
+    messages.append({"role": "user", "content": message})
+
+    response = llm_chain.invoke({"query": message})
+    
+    # # In ra các context thu được
+    # source_documents = response.get('source_documents', [])
+    # with open('res.txt', 'w', encoding='utf-8') as f:
+    #     for doc in source_documents:
+    #         f.write(doc.page_content + "\n\n")
+
     yield response['result']
 
     

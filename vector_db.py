@@ -6,10 +6,11 @@ from langchain_ai21 import AI21SemanticTextSplitter
 from dotenv import load_dotenv
 import re
 import os
+import torch
 
 load_dotenv()
 
-
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 pdf_data_path = './documents'
 vector_db_path = './db'
 model_name = 'bkai-foundation-models/vietnamese-bi-encoder'
@@ -28,15 +29,14 @@ def create_db_from_files():
     loader = DirectoryLoader(pdf_data_path, glob="*.pdf", loader_cls = PyPDFLoader)
     documents = loader.load()
 
-    # text_splitter = RecursiveCharacterTextSplitter(chunk_size=1024, chunk_overlap=128)
-    text_splitter = AI21SemanticTextSplitter(chunk_size=1024, chunk_overlap=128)
+    text_splitter = AI21SemanticTextSplitter(chunk_size=2048, chunk_overlap=512)
 
     chunks = text_splitter.split_documents(documents)
 
     for chunk in chunks:
         chunk.page_content = clean_text(chunk.page_content)
 
-    model_kwargs = {'device': 'cuda'}
+    model_kwargs = {'device': device}
     encode_kwargs = {'normalize_embeddings': False}
     embeddings = HuggingFaceEmbeddings(
         model_name=model_name,
