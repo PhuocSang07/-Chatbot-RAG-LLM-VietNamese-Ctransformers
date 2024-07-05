@@ -74,7 +74,6 @@ def create_chain(llm,
                 db, 
                 top_k_documents=3, 
                 return_source_documents=True):
-    print(prompt)
     chain = RetrievalQA.from_chain_type(
         llm = llm,
         chain_type = 'stuff',
@@ -101,12 +100,9 @@ llm = load_model(
 
 
 template = """<|im_start|>system
-Sử dụng thông tin sau đây để trả lời câu hỏi. Nếu bạn không biết câu trả lời, hãy nói không biết, đừng cố tạo ra câu trả lời. \n
-{context}<|im_end|>\n
-<|im_start|>user\n
-{question}!<|im_end|>\n
-<|im_start|>
-Hãy đảm bảo rằng bạn cung cấp câu trả lời với các mốc thời gian chính xác nhất có thể.
+Sử dụng thông tin sau đây để trả lời câu hỏi. Nếu bạn không biết câu trả lời, hãy nói không biết, đừng cố tạo ra câu trả lời. \n {context}<|im_end|>\n
+<|im_start|>user\n{question}!<|im_end|>\n
+<|im_start|>Hãy đảm bảo rằng bạn cung cấp câu trả lời với các mốc thời gian chính xác nhất có thể.
 assistant
 """
 
@@ -149,7 +145,6 @@ demo = gr.ChatInterface(
     respond,
     title="Chatbot",
     additional_inputs=[
-        # gr.Textbox(value="You are a friendly Chatbot.", label="System message"),
         gr.Slider(minimum=1, maximum=2048, value=512, step=1, label="Max new tokens"),
         gr.Slider(minimum=0.1, maximum=4.0, value=0.7, step=0.1, label="Temperature"),
         gr.Slider(minimum=1, maximum=8, value=3, step=1, label="Top k documents to search for answers in",

@@ -8,16 +8,6 @@ import re
 import os
 import torch
 
-load_dotenv()
-
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-pdf_data_path = './documents'
-vector_db_path = './db'
-model_name = 'bkai-foundation-models/vietnamese-bi-encoder'
-AI21_TOKEN = os.getenv('AI21_TOKEN')
-os.environ["AI21_API_KEY"] = AI21_TOKEN
-
-
 def clean_text(text):
     text = re.sub(r'[^\w\s,.-]', '', text)
     text = re.sub(r'\s+', ' ', text).strip()
@@ -25,7 +15,7 @@ def clean_text(text):
     
     return text
 
-def create_db_from_files():
+def create_db_from_files(model_enbedding_name, device, pdf_data_path, vector_db_path):
     loader = DirectoryLoader(pdf_data_path, glob="*.pdf", loader_cls = PyPDFLoader)
     documents = loader.load()
 
@@ -39,7 +29,7 @@ def create_db_from_files():
     model_kwargs = {'device': device}
     encode_kwargs = {'normalize_embeddings': False}
     embeddings = HuggingFaceEmbeddings(
-        model_name=model_name,
+        model_name=model_enbedding_name,
         model_kwargs=model_kwargs,
         encode_kwargs=encode_kwargs
 )
@@ -48,4 +38,14 @@ def create_db_from_files():
     db.save_local(vector_db_path)
     return db
 
-create_db_from_files()
+load_dotenv()
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+AI21_TOKEN = os.getenv('AI21_TOKEN')
+os.environ["AI21_API_KEY"] = AI21_TOKEN
+
+create_db_from_files(
+    model_enbedding_name='bkai-foundation-models/vietnamese-bi-encoder',
+    device=device,
+    pdf_data_path='./documents',
+    vector_db_path='./db'
+)
