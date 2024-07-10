@@ -1,6 +1,7 @@
 huggingface_hub
 langchain_huggingface
 langchain_ai21
+langchain_mongodb
 python-dotenv
 gradio
 minijinja
@@ -17,3 +18,4 @@ bitsandbytes
 accelerate 
 xformers 
 einops 
+pymongo

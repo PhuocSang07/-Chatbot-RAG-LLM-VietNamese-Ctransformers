@@ -16,8 +16,8 @@ from langchain.embeddings import CacheBackedEmbeddings
 
 import torch
 
-# model_file_path = './models/vinallama-7b-chat_q5_0.gguf'
-model_file_path = './models/ggml-vistral-7B-chat-q8.gguf'
+model_file_path = './models/vinallama-7b-chat_q5_0.gguf'
+# model_file_path = './models/ggml-vistral-7B-chat-q8.gguf'
 model_embedding_name = 'bkai-foundation-models/vietnamese-bi-encoder'
 vectorDB_path = './db'
 
@@ -36,7 +36,9 @@ def load_model(model_file_path,
         max_new_tokens = max_new_tokens,
         temperature = temperature,
         config = {
+            'gpu_layers': 20,
             'context_length': context_length,
+            'threads': 4,
         },
     )
     return llm

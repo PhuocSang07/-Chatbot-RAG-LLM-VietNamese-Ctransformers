@@ -11,6 +11,7 @@ res1.txt
 
 # Distribution / packaging
 models/
+cache/
 documents/
 .Python
 build/
