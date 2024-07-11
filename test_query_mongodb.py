@@ -1,23 +1,10 @@
-from pymongo import MongoClient
-import os
-from dotenv import load_dotenv
 from langchain_mongodb import MongoDBAtlasVectorSearch
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_community.document_loaders import PyPDFLoader, DirectoryLoader
-from langchain_community.vectorstores import FAISS
-from langchain.retrievers.document_compressors import LLMChainExtractor
 from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_ai21 import AI21SemanticTextSplitter
-from langchain.retrievers import ContextualCompressionRetriever
 from langchain.embeddings import CacheBackedEmbeddings
-import torch
-from dotenv import load_dotenv
-import re
-import os
 from pymongo import MongoClient
-import asyncio
-import time
-import json
+from dotenv import load_dotenv
+import torch
+import os
 
 
 load_dotenv()

@@ -1,21 +1,19 @@
-from pymongo import MongoClient
-import os
-from dotenv import load_dotenv
+from langchain_community.document_loaders import PyPDFLoader, DirectoryLoader
 from langchain_mongodb.vectorstores import MongoDBAtlasVectorSearch
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_community.document_loaders import PyPDFLoader, DirectoryLoader
-from langchain_community.vectorstores import FAISS
 from langchain_huggingface import HuggingFaceEmbeddings
+from langchain.embeddings import CacheBackedEmbeddings
+from langchain_community.cache import InMemoryCache
+from langchain_ai21 import AI21SemanticTextSplitter
+from langchain_community.vectorstores import FAISS
 from langchain.storage import LocalFileStore
 from langchain.schema import Document
-from langchain_ai21 import AI21SemanticTextSplitter
-from langchain.embeddings import CacheBackedEmbeddings
+from pymongo import MongoClient
 from dotenv import load_dotenv
 import langchain
-from langchain_community.cache import InMemoryCache
+import torch
 import re
 import os
-import torch
 
 
 load_dotenv()

@@ -1,9 +1,8 @@
+from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_community.vectorstores import FAISS
 from langchain_community.llms import CTransformers
-from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
 from langchain.chains import RetrievalQA
-from langchain_community.vectorstores import FAISS
-from langchain_huggingface import HuggingFaceEmbeddings
 
 model_name = "vilm/vinallama-2.7b-chat-GGUF"
 model_file_path = './models/vinallama-7b-chat_q5_0.gguf'

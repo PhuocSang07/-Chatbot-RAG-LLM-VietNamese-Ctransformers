@@ -1,12 +1,11 @@
-from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import PyPDFLoader, DirectoryLoader
-from langchain_community.vectorstores import FAISS
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_ai21 import AI21SemanticTextSplitter
+from langchain_community.vectorstores import FAISS
 from dotenv import load_dotenv
+import torch
 import re
 import os
-import torch
 
 def clean_text(text):
     text = re.sub(r'[^\w\s,.-]', '', text)

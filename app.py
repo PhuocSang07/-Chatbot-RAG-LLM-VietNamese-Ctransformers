@@ -1,22 +1,12 @@
-import gradio as gr
-# from huggingface_hub import InferenceClient
-import langchain
-import os
-# from langchain_community.llms import CTransformers
-# from langchain.prompts import PromptTemplate
-# from langchain.chains import RetrievalQA
-from langchain_community.vectorstores import FAISS
-# from langchain.storage import LocalFileStore
-# from langchain_huggingface import HuggingFaceEmbeddings
-# from langchain.retrievers import EnsembleRetriever
-# from langchain_community.retrievers import BM25Retriever
-from langchain_community.cache import InMemoryCache
-# from langchain.embeddings import CacheBackedEmbeddings
-from model import LanguageModelPipeline
-from dotenv import load_dotenv
 from langchain_mongodb import MongoDBAtlasVectorSearch
-import torch
+from langchain_community.cache import InMemoryCache
+from model import LanguageModelPipeline
 from pymongo import MongoClient
+from dotenv import load_dotenv
+import gradio as gr
+import langchain
+import torch
+import os
 
 
 load_dotenv()
