@@ -5,14 +5,11 @@ __pycache__/
 
 # C extensions
 *.so
-res.txt
-res1.txt
 
-
+documents/*.pdf
 # Distribution / packaging
-models/
+models/*.gguf
 cache/
-documents/
 .Python
 build/
 develop-eggs/

@@ -1,105 +1,39 @@
 import gradio as gr
-from huggingface_hub import InferenceClient
+# from huggingface_hub import InferenceClient
 import langchain
 import os
-from langchain_community.llms import CTransformers
-from langchain_community.llms import HuggingFaceHub
-from langchain.prompts import PromptTemplate
-from langchain.chains import RetrievalQA
+# from langchain_community.llms import CTransformers
+# from langchain.prompts import PromptTemplate
+# from langchain.chains import RetrievalQA
 from langchain_community.vectorstores import FAISS
-from langchain.storage import LocalFileStore
-from langchain_huggingface import HuggingFaceEmbeddings
-from langchain.retrievers import EnsembleRetriever
-from langchain_community.retrievers import BM25Retriever
+# from langchain.storage import LocalFileStore
+# from langchain_huggingface import HuggingFaceEmbeddings
+# from langchain.retrievers import EnsembleRetriever
+# from langchain_community.retrievers import BM25Retriever
 from langchain_community.cache import InMemoryCache
-from langchain.embeddings import CacheBackedEmbeddings
-
+# from langchain.embeddings import CacheBackedEmbeddings
+from model import LanguageModelPipeline
+from dotenv import load_dotenv
+from langchain_mongodb import MongoDBAtlasVectorSearch
 import torch
+from pymongo import MongoClient
 
-model_file_path = './models/vinallama-7b-chat_q5_0.gguf'
-# model_file_path = './models/ggml-vistral-7B-chat-q8.gguf'
-model_embedding_name = 'bkai-foundation-models/vietnamese-bi-encoder'
-vectorDB_path = './db'
 
+load_dotenv()
+model_file_path = os.getenv('MODEL_FILE_PATH') or './models/ggml-vistral-7B-chat-q8.gguf'
+model_embedding_name = os.getenv('MODEL_EMBEDDING_NAME') or 'bkai-foundation-models/vietnamese-bi-encoder'
+vectorDB_path = os.getenv('VECTOR_DB_PATH') or './db'
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-store = LocalFileStore("./cache/")
+store = os.getenv('STORE_CACHE_PATH') or './cache/'
 
-def load_model(model_file_path, 
-               model_type, 
-               temperature=0.01,
-               context_length=1024,
-               max_new_tokens=1024
-               ):
-    llm = CTransformers(
-        model = model_file_path,
-        model_type = model_type,
-        max_new_tokens = max_new_tokens,
-        temperature = temperature,
-        config = {
-            'gpu_layers': 20,
-            'context_length': context_length,
-            'threads': 4,
-        },
-    )
-    return llm
+MONGODB_ATLAS_CLUSTER_URI = os.getenv('MONGODB_ATLAS_CLUSTER_URI')
+DB_NAME = os.getenv('DB_NAME') or 'langchain_db'
+COLLECTION_NAME = os.getenv('COLLECTION_NAME') or 'vector_db'
+ATLAS_VECTOR_SEARCH_INDEX_NAME  = os.getenv('ATLAS_VECTOR_SEARCH_INDEX_NAME') or 'vector_search_index'
+client = MongoClient(MONGODB_ATLAS_CLUSTER_URI)
+collection = client[DB_NAME][COLLECTION_NAME]
 
-def create_embedding_model():
-    model_kwargs = {'device': device}
-    encode_kwargs = {'normalize_embeddings': False}
-    embeddings = HuggingFaceEmbeddings(
-        model_name=model_embedding_name,
-        model_kwargs=model_kwargs,
-        encode_kwargs=encode_kwargs
-    )
-    embedder = CacheBackedEmbeddings.from_bytes_store(embeddings,
-                                                      store,
-                                                      namespace=model_embedding_name)
-    return embedder
-
-embeddings = create_embedding_model()
-
-def load_db():
-    embeddings
-    db = FAISS.load_local(vectorDB_path, embeddings, allow_dangerous_deserialization=True)
-    return db
-
-def create_prompt(template):
-    prompt = PromptTemplate(
-        template=template,
-        input_variables=['context', 'question'],
-    )
-
-    return prompt
-
-def create_chain(llm, 
-                prompt, 
-                db, 
-                top_k_documents=3, 
-                return_source_documents=True):
-    chain = RetrievalQA.from_chain_type(
-        llm = llm,
-        chain_type = 'stuff',
-        retriever = db.as_retriever( 
-            search_kwargs={
-                "k": top_k_documents
-                }
-            ),
-        return_source_documents = return_source_documents,
-        chain_type_kwargs = {
-            'prompt': prompt,
-        },
-    )
-
-    return chain
-
-db = load_db()
-llm = load_model(
-    model_file_path=model_file_path, 
-    model_type='llama',
-    context_length=2048,
-    max_new_tokens=2048,
-    )
-
+print("Kết nối thành công:", client[DB_NAME])
 
 template = """<|im_start|>system
 Sử dụng thông tin sau đây để trả lời câu hỏi. Nếu bạn không biết câu trả lời, hãy nói không biết, đừng cố tạo ra câu trả lời. \n {context}<|im_end|>\n
@@ -108,10 +42,42 @@ Sử dụng thông tin sau đây để trả lời câu hỏi. Nếu bạn khôn
 assistant
 """
 
-prompt = create_prompt(template=template)
-llm_chain = create_chain(llm, prompt, db)
-
 langchain.llm_cache = InMemoryCache()
+pipeline = LanguageModelPipeline(
+    model_file_path=model_file_path,
+    model_embedding_name= model_embedding_name, 
+    vectorDB_path=vectorDB_path,
+    cache_path=store
+)
+
+llm = pipeline.load_model(
+    model_type='llama',
+    temperature=0.01,
+    context_length=2048, 
+    max_new_tokens=2048,
+    gpu_layers=10,
+    threads=4
+)
+
+db = pipeline.load_db()
+prompt = pipeline.create_prompt(template=template)
+embedding = pipeline.get_embedding()
+
+vector_store = MongoDBAtlasVectorSearch(
+    collection=collection,
+    embedding=embedding,
+    index_name=ATLAS_VECTOR_SEARCH_INDEX_NAME,
+)
+
+# llm_chain = pipeline.create_chain(llm, prompt, db, 3, True)
+llm_chain = pipeline.create_chain_hybird(
+    llm=llm, 
+    prompt=prompt, 
+    collection=collection,
+    db=vector_store,
+    top_k_documents=3,
+    return_source_documents=True
+)
 
 def respond(message, 
             history: list[tuple[str, str]], 
@@ -133,11 +99,11 @@ def respond(message,
 
     response = llm_chain.invoke({"query": message})
     
-    # # In ra các context thu được
+    # In ra các context thu được
     # source_documents = response.get('source_documents', [])
     # with open('res.txt', 'w', encoding='utf-8') as f:
     #     for doc in source_documents:
-    #         f.write(doc.page_content + "\n\n")
+    #         f.write(doc.page_content + "----\n\n")
 
     yield response['result']
 
