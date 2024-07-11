@@ -1,4 +1,4 @@
-# Chatbot RAG with LLM VietNamese use Ctransformers, Langchain, MongoDB
+# VietNamese Chatbot RAG with LLM: Ctransformers, Langchain, MongoDB or FAISS
 ___
 ## Environment variables:
 ```
