@@ -1,4 +1,4 @@
-from langchain_community.document_loaders import PyPDFLoader, DirectoryLoader
+from langchain_community.document_loaders import PyPDFLoader, DirectoryLoader, TextLoader
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_ai21 import AI21SemanticTextSplitter
 from langchain_community.vectorstores import FAISS
@@ -15,8 +15,11 @@ def clean_text(text):
     return text
 
 def create_db_from_files(model_enbedding_name, device, pdf_data_path, vector_db_path):
-    loader = DirectoryLoader(pdf_data_path, glob="*.pdf", loader_cls = PyPDFLoader)
-    documents = loader.load()
+    text_loader_kwargs={'autodetect_encoding': True}
+    pdf_loader = DirectoryLoader(pdf_data_path, glob="**/*.pdf", loader_cls = PyPDFLoader)
+    txt_loader = DirectoryLoader(pdf_data_path, glob="**/*.txt", loader_cls = TextLoader, loader_kwargs=text_loader_kwargs)
+
+    documents = pdf_loader.load() + txt_loader.load()
 
     text_splitter = AI21SemanticTextSplitter(chunk_size=4096, chunk_overlap=1024)
 

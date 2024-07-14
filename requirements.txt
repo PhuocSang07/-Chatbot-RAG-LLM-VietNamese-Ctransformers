@@ -20,3 +20,5 @@ xformers
 einops 
 pymongo
 rank_bm25
+flask
+chardet

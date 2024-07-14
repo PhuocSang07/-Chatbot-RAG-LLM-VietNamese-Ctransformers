@@ -1,6 +1,5 @@
-from langchain_community.document_loaders import PyPDFLoader, DirectoryLoader
+from langchain_community.document_loaders import PyPDFLoader, DirectoryLoader, TextLoader
 from langchain_mongodb.vectorstores import MongoDBAtlasVectorSearch
-from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain.embeddings import CacheBackedEmbeddings
 from langchain_community.cache import InMemoryCache
@@ -51,8 +50,12 @@ def clean_text(text):
     return text
 
 def create_chunks_from_files(pdf_data_path):
-    loader = DirectoryLoader(pdf_data_path, glob="*.pdf", loader_cls = PyPDFLoader)
-    documents = loader.load()
+    text_loader_kwargs={'autodetect_encoding': True}
+    pdf_loader = DirectoryLoader(pdf_data_path, glob="**/*.pdf", loader_cls = PyPDFLoader)
+    txt_loader = DirectoryLoader(pdf_data_path, glob="**/*.txt", loader_cls = TextLoader, loader_kwargs=text_loader_kwargs)
+
+    documents = pdf_loader.load() + txt_loader.load()
+
 
     text_splitter = AI21SemanticTextSplitter(chunk_size=4096, chunk_overlap=1024)
 

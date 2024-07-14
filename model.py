@@ -77,14 +77,22 @@ class LanguageModelPipeline:
     
     def create_chain_hybird(self, llm, prompt, collection, db, top_k_documents=3, return_source_documents=True):
         docs = collection.find()
-        documents = [Document(
-            page_content=doc['text'], metadata={'page': doc['page'], 'source': doc['source'], 'source_type': doc['source_type']}) for doc in docs]
+        documents = [
+            Document(
+                page_content=doc['text'], 
+                metadata={
+                    'page': doc['page'] if (doc.get('page')) else 1,
+                    'source': doc['source'],
+                    'source_type': doc['source_type']
+                }
+            ) for doc in docs
+        ]
 
         bm25_retriever = BM25Retriever.from_documents(documents)
         semantic_retriever = db.as_retriever(search_kwargs={"k": top_k_documents})
         ensemble_retriever = EnsembleRetriever(
             retrievers=[bm25_retriever, semantic_retriever], 
-            weights=[0.5, 0.5]
+            weights=[0.2, 0.8]
         )
 
         chain = RetrievalQA.from_chain_type(

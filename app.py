@@ -7,23 +7,29 @@ import gradio as gr
 import langchain
 import torch
 import os
+# from semantic_router import Router, Route, samples
 
 
+#---------- Enviroment Variables -----------#
 load_dotenv()
 model_file_path = os.getenv('MODEL_FILE_PATH') or './models/ggml-vistral-7B-chat-q8.gguf'
 model_embedding_name = os.getenv('MODEL_EMBEDDING_NAME') or 'bkai-foundation-models/vietnamese-bi-encoder'
 vectorDB_path = os.getenv('VECTOR_DB_PATH') or './db'
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 store = os.getenv('STORE_CACHE_PATH') or './cache/'
+#--------------------------------------------#
 
+
+#------------- MongoDB Atlas ----------------#
 MONGODB_ATLAS_CLUSTER_URI = os.getenv('MONGODB_ATLAS_CLUSTER_URI')
 DB_NAME = os.getenv('DB_NAME') or 'langchain_db'
 COLLECTION_NAME = os.getenv('COLLECTION_NAME') or 'vector_db'
 ATLAS_VECTOR_SEARCH_INDEX_NAME  = os.getenv('ATLAS_VECTOR_SEARCH_INDEX_NAME') or 'vector_search_index'
+
 client = MongoClient(MONGODB_ATLAS_CLUSTER_URI)
 collection = client[DB_NAME][COLLECTION_NAME]
-
-print("Kết nối thành công:", client[DB_NAME])
+print("Kết nối thành công:", client[DB_NAME].name)
+#-------------------------------------------#
 
 template = """<|im_start|>system
 Sử dụng thông tin sau đây để trả lời câu hỏi. Nếu bạn không biết câu trả lời, hãy nói không biết, đừng cố tạo ra câu trả lời. \n {context}<|im_end|>\n
@@ -45,11 +51,11 @@ llm = pipeline.load_model(
     temperature=0.01,
     context_length=2048, 
     max_new_tokens=2048,
-    gpu_layers=10,
+    gpu_layers=32,
     threads=4
 )
 
-db = pipeline.load_db()
+# db = pipeline.load_db()
 prompt = pipeline.create_prompt(template=template)
 embedding = pipeline.get_embedding()
 
@@ -69,6 +75,15 @@ llm_chain = pipeline.create_chain_hybird(
     return_source_documents=True
 )
 
+# #------------- Semantic Router ----------------#
+# NORMAL_CHAT_ROUTE_NAME = 'normal_chat'
+# FAQ_ROUTE_NAME = 'faq'
+
+# normal_router = Route(name=NORMAL_CHAT_ROUTE_NAME, sample=samples.normal_chat)
+# faq_router = Route(name=FAQ_ROUTE_NAME, sample=[])
+# semantic_router = Router(embedding=embedding, routes=[normal_router, faq_router])
+# #----------------------------------------------#
+
 def respond(message, 
             history: list[tuple[str, str]], 
             system_message, 
@@ -79,21 +94,15 @@ def respond(message,
     
     messages = [{"role": "system", "content": system_message}]
 
-    for val in history:
-        if val[0]:
-            messages.append({"role": "user", "content": val[0]})
-        if val[1]:
-            messages.append({"role": "assistant", "content": val[1]})
+    # for val in history:
+    #     if val[0]:
+    #         messages.append({"role": "user", "content": val[0]})
+    #     if val[1]:
+    #         messages.append({"role": "assistant", "content": val[1]})
 
     messages.append({"role": "user", "content": message})
 
     response = llm_chain.invoke({"query": message})
-    
-    # In ra các context thu được
-    # source_documents = response.get('source_documents', [])
-    # with open('res.txt', 'w', encoding='utf-8') as f:
-    #     for doc in source_documents:
-    #         f.write(doc.page_content + "----\n\n")
 
     yield response['result']
 
@@ -101,7 +110,7 @@ def respond(message,
 
 demo = gr.ChatInterface(
     respond,
-    title="Chatbot",
+    title="QA History",
     additional_inputs=[
         gr.Slider(minimum=1, maximum=2048, value=512, step=1, label="Max new tokens"),
         gr.Slider(minimum=0.1, maximum=4.0, value=0.7, step=0.1, label="Temperature"),

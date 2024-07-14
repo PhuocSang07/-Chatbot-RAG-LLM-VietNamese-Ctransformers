@@ -61,11 +61,3 @@ semantic_search_results = collection.aggregate([
 for i in semantic_search_results:
     print(i['text'])
     print('--------------------------------')
-
-# res = compression_retriever.get_relevant_documents(query=query)
-# print(res)
-
-# for result in results:
-    # print(result.page_content)
-    # print(result)
-    # print('--------------')
