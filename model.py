@@ -1,4 +1,5 @@
 from langchain_community.retrievers import BM25Retriever
+from langchain_community.retrievers import WikipediaRetriever
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain.embeddings import CacheBackedEmbeddings
 from langchain_community.llms import CTransformers
@@ -75,6 +76,23 @@ class LanguageModelPipeline:
         )
         return chain
     
+    def create_chain_wiki(self, llm, prompt, top_k_documents=3, return_source_documents=True):
+        chain = RetrievalQA.from_chain_type(
+            llm=llm,
+            chain_type='stuff',
+            retriever=WikipediaRetriever(
+                top_k_results=top_k_documents,
+                lang='vi',
+                doc_content_chars_max=2048
+                ),
+            return_source_documents=return_source_documents,
+            chain_type_kwargs={
+                'prompt': prompt,
+                'document_variable_name': 'context',  
+            },
+        )
+        return chain
+    
     def create_chain_hybird(self, llm, prompt, collection, db, top_k_documents=3, return_source_documents=True):
         docs = collection.find()
         documents = [
@@ -92,7 +110,7 @@ class LanguageModelPipeline:
         semantic_retriever = db.as_retriever(search_kwargs={"k": top_k_documents})
         ensemble_retriever = EnsembleRetriever(
             retrievers=[bm25_retriever, semantic_retriever], 
-            weights=[0.2, 0.8]
+            weights=[0.4, 0.6]
         )
 
         chain = RetrievalQA.from_chain_type(

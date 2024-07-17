@@ -31,11 +31,20 @@ collection = client[DB_NAME][COLLECTION_NAME]
 print("Kết nối thành công:", client[DB_NAME].name)
 #-------------------------------------------#
 
-template = """<|im_start|>system
-Sử dụng thông tin sau đây để trả lời câu hỏi. Nếu bạn không biết câu trả lời, hãy nói không biết, đừng cố tạo ra câu trả lời. \n {context}<|im_end|>\n
-<|im_start|>user\n{question}!<|im_end|>\n
-<|im_start|>Hãy đảm bảo rằng bạn cung cấp câu trả lời với các mốc thời gian chính xác nhất có thể.
-assistant
+# template = """<|im_start|>system
+# Sử dụng thông tin sau đây để trả lời câu hỏi. Nếu bạn không biết câu trả lời, hãy nói không biết, đừng cố tạo ra câu trả lời. \n {context}<|im_end|>\n
+# <|im_start|>user\n{question}!<|im_end|>\n
+# <|im_start|>Hãy đảm bảo rằng bạn cung cấp câu trả lời với các mốc thời gian chính xác nhất có thể.
+# assistant
+# """
+template = """
+<s>[INST] <<SYS>>
+Bạn là một trợ lí Tiếng Việt nhiệt tình và trung thực.
+Câu trả lời của bạn không nên chứa bất kỳ nội dung gây hại, phân biệt chủng tộc, phân biệt giới tính, độc hại, nguy hiểm hoặc bất hợp pháp nào. Nếu một câu hỏi không có ý nghĩa hoặc không hợp lý về mặt thông tin, hãy giải thích tại sao thay vì trả lời một điều gì đó không chính xác. Nếu bạn không biết câu trả lời cho một câu hỏi, hãy trả lời là bạn không biết và vui lòng không chia sẻ thông tin sai lệch. 
+Bạn cần phải trả lời thông tin về các mốc thời gian một cách chính xác nhất có thể.
+{context}
+<</SYS>>
+Câu hỏi: {question} [/INST]
 """
 
 langchain.llm_cache = InMemoryCache()
@@ -66,14 +75,20 @@ vector_store = MongoDBAtlasVectorSearch(
 )
 
 # llm_chain = pipeline.create_chain(llm, prompt, db, 3, True)
-llm_chain = pipeline.create_chain_hybird(
-    llm=llm, 
-    prompt=prompt, 
-    collection=collection,
-    db=vector_store,
-    top_k_documents=3,
+# llm_chain = pipeline.create_chain_hybird(
+#     llm=llm, 
+#     prompt=prompt, 
+#     collection=collection,
+#     db=vector_store,
+#     top_k_documents=3,
+#     return_source_documents=True
+# )
+llm_chain = pipeline.create_chain_wiki(
+    llm=llm,
+    prompt=prompt,
+    top_k_documents=2,
     return_source_documents=True
-)
+    )
 
 # #------------- Semantic Router ----------------#
 # NORMAL_CHAT_ROUTE_NAME = 'normal_chat'
