@@ -10,6 +10,7 @@ documents/*.pdf
 # Distribution / packaging
 models/*.gguf
 cache/
+documents/lichsu12
 .Python
 build/
 develop-eggs/

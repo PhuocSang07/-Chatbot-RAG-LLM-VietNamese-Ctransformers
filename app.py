@@ -4,23 +4,25 @@ from model import LanguageModelPipeline
 from pymongo import MongoClient
 from dotenv import load_dotenv
 import gradio as gr
+import google.generativeai as genai
 import langchain
 import torch
 import os
-# from semantic_router import Router, Route, samples
+import getpass
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_google_genai import ChatGoogleGenerativeAI
+import json
 
-
-#---------- Enviroment Variables -----------#
+#---- Enviroment Variables ----#
 load_dotenv()
 model_file_path = os.getenv('MODEL_FILE_PATH') or './models/ggml-vistral-7B-chat-q8.gguf'
 model_embedding_name = os.getenv('MODEL_EMBEDDING_NAME') or 'bkai-foundation-models/vietnamese-bi-encoder'
 vectorDB_path = os.getenv('VECTOR_DB_PATH') or './db'
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 store = os.getenv('STORE_CACHE_PATH') or './cache/'
-#--------------------------------------------#
+template = os.getenv('TEMPLATE')
 
-
-#------------- MongoDB Atlas ----------------#
+#---- MongoDB Atlas ----#
 MONGODB_ATLAS_CLUSTER_URI = os.getenv('MONGODB_ATLAS_CLUSTER_URI')
 DB_NAME = os.getenv('DB_NAME') or 'langchain_db'
 COLLECTION_NAME = os.getenv('COLLECTION_NAME') or 'vector_db'
@@ -29,24 +31,9 @@ ATLAS_VECTOR_SEARCH_INDEX_NAME  = os.getenv('ATLAS_VECTOR_SEARCH_INDEX_NAME') or
 client = MongoClient(MONGODB_ATLAS_CLUSTER_URI)
 collection = client[DB_NAME][COLLECTION_NAME]
 print("Kết nối thành công:", client[DB_NAME].name)
-#-------------------------------------------#
 
-# template = """<|im_start|>system
-# Sử dụng thông tin sau đây để trả lời câu hỏi. Nếu bạn không biết câu trả lời, hãy nói không biết, đừng cố tạo ra câu trả lời. \n {context}<|im_end|>\n
-# <|im_start|>user\n{question}!<|im_end|>\n
-# <|im_start|>Hãy đảm bảo rằng bạn cung cấp câu trả lời với các mốc thời gian chính xác nhất có thể.
-# assistant
-# """
-template = """
-<s>[INST] <<SYS>>
-Bạn là một trợ lí Tiếng Việt nhiệt tình và trung thực.
-Câu trả lời của bạn không nên chứa bất kỳ nội dung gây hại, phân biệt chủng tộc, phân biệt giới tính, độc hại, nguy hiểm hoặc bất hợp pháp nào. Nếu một câu hỏi không có ý nghĩa hoặc không hợp lý về mặt thông tin, hãy giải thích tại sao thay vì trả lời một điều gì đó không chính xác. Nếu bạn không biết câu trả lời cho một câu hỏi, hãy trả lời là bạn không biết và vui lòng không chia sẻ thông tin sai lệch. 
-Bạn cần phải trả lời thông tin về các mốc thời gian một cách chính xác nhất có thể.
-{context}
-<</SYS>>
-Câu hỏi: {question} [/INST]
-"""
 
+#---- Language Model Pipeline ----#
 langchain.llm_cache = InMemoryCache()
 pipeline = LanguageModelPipeline(
     model_file_path=model_file_path,
@@ -64,41 +51,39 @@ llm = pipeline.load_model(
     threads=4
 )
 
-# db = pipeline.load_db()
 prompt = pipeline.create_prompt(template=template)
 embedding = pipeline.get_embedding()
 
+#---- MongoDB Atlas Vector Search ----#
 vector_store = MongoDBAtlasVectorSearch(
     collection=collection,
     embedding=embedding,
     index_name=ATLAS_VECTOR_SEARCH_INDEX_NAME,
 )
 
+#---- FAISS Retriever ----#
+# db = pipeline.load_db()
 # llm_chain = pipeline.create_chain(llm, prompt, db, 3, True)
-# llm_chain = pipeline.create_chain_hybird(
-#     llm=llm, 
-#     prompt=prompt, 
-#     collection=collection,
-#     db=vector_store,
-#     top_k_documents=3,
+
+#---- Wiki Retriever ----#
+# llm_chain = pipeline.create_chain_wiki(
+#     llm=llm,
+#     prompt=prompt,
+#     top_k_documents=2,
 #     return_source_documents=True
 # )
-llm_chain = pipeline.create_chain_wiki(
-    llm=llm,
-    prompt=prompt,
-    top_k_documents=2,
+
+#---- EnsembleRetriever with BM25 search and semantic search (Faiss or MongoDB)  ----#
+llm_chain = pipeline.create_chain_ensemble(
+    llm=llm, 
+    prompt=prompt, 
+    collection=collection,
+    db=vector_store,
+    top_k_documents=3,
     return_source_documents=True
-    )
+)
 
-# #------------- Semantic Router ----------------#
-# NORMAL_CHAT_ROUTE_NAME = 'normal_chat'
-# FAQ_ROUTE_NAME = 'faq'
-
-# normal_router = Route(name=NORMAL_CHAT_ROUTE_NAME, sample=samples.normal_chat)
-# faq_router = Route(name=FAQ_ROUTE_NAME, sample=[])
-# semantic_router = Router(embedding=embedding, routes=[normal_router, faq_router])
-# #----------------------------------------------#
-
+#---- Gradio ----#
 def respond(message, 
             history: list[tuple[str, str]], 
             system_message, 
@@ -108,21 +93,13 @@ def respond(message,
             ):
     
     messages = [{"role": "system", "content": system_message}]
-
-    # for val in history:
-    #     if val[0]:
-    #         messages.append({"role": "user", "content": val[0]})
-    #     if val[1]:
-    #         messages.append({"role": "assistant", "content": val[1]})
-
     messages.append({"role": "user", "content": message})
-
     response = llm_chain.invoke({"query": message})
 
     yield response['result']
 
     
-
+#---- Gradio Interface ----#
 demo = gr.ChatInterface(
     respond,
     title="QA History",

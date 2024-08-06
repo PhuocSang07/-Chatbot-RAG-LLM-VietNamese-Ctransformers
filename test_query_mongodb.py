@@ -59,5 +59,4 @@ semantic_search_results = collection.aggregate([
 
 
 for i in semantic_search_results:
-    print(i['text'])
-    print('--------------------------------')
+    print(i['text'], end='\n\n')

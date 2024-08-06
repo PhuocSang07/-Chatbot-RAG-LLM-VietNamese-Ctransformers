@@ -11,6 +11,7 @@ STORE_CACHE_PATH = './cache'
 DB_NAME = ''
 COLLECTION_NAME = ''
 ATLAS_VECTOR_SEARCH_INDEX_NAME = ''
+TEMPLATE = ''
 ```
 ___
 ## How to run:
@@ -23,12 +24,16 @@ ___
 ___
 ## Models used:
 - Embedding: 
-    - [all-MiniLM-L6-v2-f16](https://huggingface.co/caliex/all-MiniLM-L6-v2-f16.gguf)
     - [bkai-foundation-models/vietnamese-bi-encoder](https://huggingface.co/bkai-foundation-models/vietnamese-bi-encoder)
 - LLMs: 
     - [Vistral-7B-Chat-GGUF](https://huggingface.co/uonlp/Vistral-7B-Chat-gguf)
     - [VinaLLaMA-2.7B-Chat-GGUF](https://huggingface.co/vilm/vinallama-2.7b-chat-GGUF)
 ___
+
+## Retriever used:
+- Faiss Retriver
+- Mongodb Retriever
+- Ensemble Retriever
 
 ## Demo
 <!-- ![Demo IMG](images/image.png) -->

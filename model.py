@@ -93,7 +93,7 @@ class LanguageModelPipeline:
         )
         return chain
     
-    def create_chain_hybird(self, llm, prompt, collection, db, top_k_documents=3, return_source_documents=True):
+    def create_chain_ensemble(self, llm, prompt, collection, db, top_k_documents=3, return_source_documents=True):
         docs = collection.find()
         documents = [
             Document(
@@ -101,7 +101,7 @@ class LanguageModelPipeline:
                 metadata={
                     'page': doc['page'] if (doc.get('page')) else 1,
                     'source': doc['source'],
-                    'source_type': doc['source_type']
+                    'source_type': doc['source_type'] if (doc.get('source_type')) else 'unknown',
                 }
             ) for doc in docs
         ]
